@@ -138,7 +138,63 @@ function trimAudio(inputFile, outputFilePrefix, silenceData, totalDuration) {
 }
 
 
+function processSegment1(englishClip, chineseClip, outputFile) {
+    return new Promise((resolve, reject) => {
+        const filterParts = [];
 
+        // 使用 concat 滤镜拼接两个音频文件，并连接到输出流
+        filterParts.push(`[0:a][1:a]concat=n=2:v=0:a=1[outa];`);  // 将两个音频流拼接到一起，并输出到 [outa]
+
+        console.log('生成的 filterParts:', filterParts.join(''));
+
+        ffmpeg()
+            .input(englishClip)  // 第一个输入：英文片段
+            .input(chineseClip)  // 第二个输入：中文片段
+            .complexFilter(filterParts.join(''))  // 使用 concat 滤镜
+            .map('[outa]')  // 明确映射拼接的音频输出流
+            .outputOptions('-acodec libmp3lame')  // 指定 MP3 编码格式
+            .output(outputFile)
+            .on('end', () => {
+                console.log(`音频拼接完成: ${outputFile}`);
+                resolve();
+            })
+            .on('error', (err) => {
+                console.error('处理音频时出错:', err);
+                reject(err);
+            })
+            .run();
+    });
+}
+function processSegment2(englishClip, chineseClip, outputFile) {
+    return new Promise((resolve, reject) => {
+        const filterParts = [];
+
+        // 调整音量并拼接音频
+        filterParts.push(`[0:a]volume=1.0[a_eng];`);  // 调整英文片段音量
+        filterParts.push(`[1:a]volume=0.5[a_chn];`);  // 调整中文片段音量
+        filterParts.push(`anullsrc=r=44100:cl=stereo,atrim=duration=2[silence];`);  // 添加2秒静音
+        filterParts.push(`[a_eng][silence][a_chn]concat=n=3:v=0:a=1[outa];`);  // 拼接英文、静音和中文
+
+        console.log('生成的 filterParts:', filterParts.join(''));
+
+        ffmpeg()
+            .input(englishClip)  // 第一个输入：英文片段
+            .input(chineseClip)  // 第二个输入：中文片段
+            .complexFilter(filterParts.join(''))  // 使用滤镜链
+            .map('[outa]')  // 映射到最终输出
+            .outputOptions('-acodec libmp3lame')  // 指定 MP3 编码格式
+            .output(outputFile)
+            .on('end', () => {
+                console.log(`音频拼接完成: ${outputFile}`);
+                resolve();
+            })
+            .on('error', (err) => {
+                console.error('处理音频时出错:', err);
+                reject(err);
+            })
+            .run();
+    });
+}
 
 
 
