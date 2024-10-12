@@ -1,0 +1,32 @@
+{
+  "tracks": [
+    {
+      "type": "main",
+      "assets": [
+        {
+          "type": "image",
+          "src": "sucai/bg.png",
+          "duration": 10,
+          "position": 0
+        }
+      ]
+    },
+    {
+      "type": "audio",
+      "assets": [
+        {
+          "type": "audio",
+          "src": "sucai/1.mp3",
+          "duration": 5,
+          "position": 0
+        },
+        {
+          "type": "audio",
+          "src": "sucai/2.mp3",
+          "duration": 5,
+          "position": 5
+        }
+      ]
+    }
+  ]
+}
