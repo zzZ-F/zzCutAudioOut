@@ -212,14 +212,14 @@ async function processAudioFiles() {
             throw new Error('英文片段和中文片段数量不一致，无法一一对应处理');
         }
         console.log('chineseSegments', chineseSegments, englishSegments);
-        const outputFile = path.join(outputDir, `final_output_${1}.mp3`);
-        await processSegment(englishSegments[0], chineseSegments[0],  outputFile);
-        return;
+        // const outputFile = path.join(outputDir, `final_output_${1}.mp3`);
+        // await processSegment(englishSegments[0], chineseSegments[0],  outputFile);
+        // return;
         // 如果你想恢复处理片段的逻辑
-        // for (let i = 0; i < englishSegments.length; i++) {
-        //     const outputFile = path.join(outputDir, `final_output_${i + 1}.mp3`);
-        //     await processSegment(englishSegments[i], chineseSegments[i], i, outputFile);
-        // }
+        for (let i = 0; i < englishSegments.length; i++) {
+            const outputFile = path.join(outputDir, `final_output_${i + 1}.mp3`);
+            await processSegment(englishSegments[i], chineseSegments[i], outputFile);
+        }
 
         console.log('所有音频处理完成');
     } catch (error) {
