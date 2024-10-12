@@ -171,9 +171,12 @@ function processSegment2(englishClip, chineseClip, outputFile) {
 
         // 调整音量并拼接音频
         filterParts.push(`[0:a]volume=1.0[a_eng];`);  // 调整英文片段音量
-        filterParts.push(`[1:a]volume=0.5[a_chn];`);  // 调整中文片段音量
+        // filterParts.push(`[0:a]volume=1.0[a_eng1];`);  // 调整英文片段音量
+        // filterParts.push(`[0:a]asetrate=44100*0.9[a_eng1];`);
+        filterParts.push(`[0:a]rubberband=pitch=1.1[a_eng1];`); // 音高调节
+        // filterParts.push(`[1:a]volume=0.5[a_chn];`);  // 调整中文片段音量
         filterParts.push(`anullsrc=r=44100:cl=stereo,atrim=duration=2[silence];`);  // 添加2秒静音
-        filterParts.push(`[a_eng][silence][a_chn]concat=n=3:v=0:a=1[outa];`);  // 拼接英文、静音和中文
+        filterParts.push(`[a_eng][silence][a_eng1]concat=n=3:v=0:a=1[outa];`);  // 拼接英文、静音和中文
 
         console.log('生成的 filterParts:', filterParts.join(''));
 
@@ -207,7 +210,7 @@ function processSegment(englishClip, chineseClip, outputFile) {
         // 第2个静音英文片段
         filterParts.push(`[0:a]volume=0.0[a_1];`);
         // // 第3个正常音量英文片段
-        filterParts.push(`[0:a]volume=1.0[a_2];`);
+        filterParts.push(`[0:a]rubberband=pitch=1.1[a_2];`);
         // // 第4个静音英文片段
         filterParts.push(`[0:a]volume=0.0[a_3];`);
         //
@@ -218,7 +221,7 @@ function processSegment(englishClip, chineseClip, outputFile) {
         // 再次处理同样的英文片段，创建新的流名称
         filterParts.push(`[0:a]volume=1.0[a_0_rpt];`);
         filterParts.push(`[0:a]volume=0.0[a_1_rpt];`);
-        filterParts.push(`[0:a]volume=1.0[a_2_rpt];`);
+        filterParts.push(`[0:a]rubberband=pitch=1.1[a_2_rpt];`);
         filterParts.push(`[0:a]volume=0.0[a_3_rpt];`);
         // 拼接顺序为: 英文1 -> 英文1静音 -> 英文1 -> 英文1静音 -> 中文 -> 静音 -> 英文1 -> 英文1静音 -> 英文1 -> 英文1静音
         filterParts.push(`[a_0][a_1][a_2][a_3][a_chinese][silence][a_0_rpt][a_1_rpt][a_2_rpt][a_3_rpt]concat=n=10:v=0:a=1[outa];`);
@@ -268,9 +271,9 @@ async function processAudioFiles() {
             throw new Error('英文片段和中文片段数量不一致，无法一一对应处理');
         }
         console.log('chineseSegments', chineseSegments, englishSegments);
-        // const outputFile = path.join(outputDir, `final_output_${1}.mp3`);
-        // await processSegment(englishSegments[0], chineseSegments[0],  outputFile);
-        // return;
+        const outputFile = path.join(outputDir, `final_output_${1}.mp3`);
+        await processSegment(englishSegments[0], chineseSegments[0],  outputFile);
+        return;
         // 如果你想恢复处理片段的逻辑
         for (let i = 0; i < englishSegments.length; i++) {
             const outputFile = path.join(outputDir, `final_output_${i + 1}.mp3`);
