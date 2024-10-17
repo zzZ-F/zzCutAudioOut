@@ -1,7 +1,8 @@
 /*
 *  这个是长听力的裁剪脚本
-*   正常读 留空白 变调读 留空白 中文翻译读 留空白 正常读 留空白 变调读 留空白
-*   这个是输出出来一个整体音频片段
+*   正常读 留空白 变调读 留空白
+*   中文翻译读 留空白 正常读 留空白 变调读 留空白
+*   这个是输出出来一个两个音频
 * */
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
