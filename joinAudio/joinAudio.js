@@ -10,8 +10,9 @@ ffmpeg.setFfprobePath(ffprobePath);
 
 // 输入和输出文件路径
 const audioDir = path.join(__dirname, 'audio');
+const audioDir2 = path.join(__dirname, 'publicAudio');
 const outputDir = path.join(__dirname, 'output');
-const silenceFile = path.join(audioDir, '3秒静音.mp3'); // 3秒静音音频文件
+const silenceFile = path.join(audioDir2, '3秒静音.mp3'); // 3秒静音音频文件
 
 // 检查输出目录是否存在，不存在则创建
 if (!fs.existsSync(outputDir)) {
