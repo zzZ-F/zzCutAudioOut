@@ -4,11 +4,11 @@
 /node_modules
 /.pnp
 .pnp.js
-#/selectAudio/audio
-#/selectAudio/output
+/selectAudio/audio
+/selectAudio/output
 
-#/joinAudio/audio
-#/joinAudio/output
+/joinAudio/audio
+/joinAudio/output
 # testing
 /coverage
 
