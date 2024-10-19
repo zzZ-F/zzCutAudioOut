@@ -1,9 +1,3 @@
-/*
-*  这个是长听力的裁剪脚本
-*   正常读 留空白 变调读 留空白
-*   中文翻译读 留空白 正常读 留空白 变调读 留空白
-*   这个是输出出来一个两个音频
-* */
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const ffprobePath = require('@ffprobe-installer/ffprobe').path;
@@ -23,6 +17,7 @@ const outputDir = path.join(__dirname, 'output');
 if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir);
 }
+
 // 获取音频长度
 function getAudioDuration(inputFile) {
     return new Promise((resolve, reject) => {
@@ -129,107 +124,57 @@ function trimAudio(inputFile, outputFilePrefix, silenceData, totalDuration) {
     });
 }
 
-
-function processSegment1(englishClip, chineseClip, outputFile) {
+// 函数：处理音频片段生成 "start" 和 "end" 文件
+function processSegment(englishClip, chineseClip, outputFileStart, outputFileEnd) {
     return new Promise((resolve, reject) => {
-        const filterParts = [];
+        const filterPartsStart = [];
+        const filterPartsEnd = [];
 
-        // 使用 concat 滤镜拼接两个音频文件，并连接到输出流
-        filterParts.push(`[0:a][1:a]concat=n=2:v=0:a=1[outa];`);  // 将两个音频流拼接到一起，并输出到 [outa]
+        // For final_output_${i + 1}_start.mp3
+        filterPartsStart.push(`[0:a]volume=1.0[a_0];`);  // 第1个正常音量英文片段
+        filterPartsStart.push(`[0:a]volume=0.0[a_1];`);  // 第2个静音英文片段
+        filterPartsStart.push(`[0:a]rubberband=pitch=1.1[a_2];`);  // 第3个正常音量英文片段
+        filterPartsStart.push(`[0:a]volume=0.0[a_3];`);  // 第4个静音英文片段
+        filterPartsStart.push(`[a_0][a_1][a_2][a_3]concat=n=4:v=0:a=1[outa];`);  // 拼接顺序
 
-        console.log('生成的 filterParts:', filterParts.join(''));
+        // For final_output_${i + 1}_end.mp3
+        filterPartsEnd.push(`[1:a]volume=1.0[a_chinese];`);  // 第1个正常音量中文片段
+        filterPartsEnd.push(`anullsrc=r=44100:cl=stereo,atrim=duration=2[silence];`);  // 2秒静音
+        filterPartsEnd.push(`[0:a]volume=1.0[a_0_rpt];`);  // 英文片段
+        filterPartsEnd.push(`[0:a]volume=0.0[a_1_rpt];`);  // 英文片段静音
+        filterPartsEnd.push(`[0:a]rubberband=pitch=1.1[a_2_rpt];`);  // 英文片段
+        filterPartsEnd.push(`[0:a]volume=0.0[a_3_rpt];`);  // 英文片段静音
+        filterPartsEnd.push(`[a_chinese][silence][a_0_rpt][a_1_rpt][a_2_rpt][a_3_rpt]concat=n=6:v=0:a=1[outa];`);  // 拼接顺序
 
+        console.log('生成的 filterPartsStart:', filterPartsStart.join(''));
+        console.log('生成的 filterPartsEnd:', filterPartsEnd.join(''));
+
+        // 处理 start 文件
         ffmpeg()
-            .input(englishClip)  // 第一个输入：英文片段
-            .input(chineseClip)  // 第二个输入：中文片段
-            .complexFilter(filterParts.join(''))  // 使用 concat 滤镜
-            .map('[outa]')  // 明确映射拼接的音频输出流
+            .input(englishClip)  // 输入英文片段
+            .complexFilter(filterPartsStart.join(''))  // 使用滤镜链
+            .map('[outa]')  // 映射到最终输出
             .outputOptions('-acodec libmp3lame')  // 指定 MP3 编码格式
-            .output(outputFile)
+            .output(outputFileStart)
             .on('end', () => {
-                console.log(`音频拼接完成: ${outputFile}`);
-                resolve();
+                console.log(`音频 start 部分拼接完成: ${outputFileStart}`);
             })
             .on('error', (err) => {
-                console.error('处理音频时出错:', err);
+                console.error('处理音频片段时出错:', err);
                 reject(err);
             })
             .run();
-    });
-}
-function processSegment2(englishClip, chineseClip, outputFile) {
-    return new Promise((resolve, reject) => {
-        const filterParts = [];
 
-        // 调整音量并拼接音频
-        filterParts.push(`[0:a]volume=1.0[a_eng];`);  // 调整英文片段音量
-        // filterParts.push(`[0:a]volume=1.0[a_eng1];`);  // 调整英文片段音量
-        // filterParts.push(`[0:a]asetrate=44100*0.9[a_eng1];`);
-        filterParts.push(`[0:a]rubberband=pitch=1.1[a_eng1];`); // 音高调节
-        // filterParts.push(`[1:a]volume=0.5[a_chn];`);  // 调整中文片段音量
-        filterParts.push(`anullsrc=r=44100:cl=stereo,atrim=duration=2[silence];`);  // 添加2秒静音
-        filterParts.push(`[a_eng][silence][a_eng1]concat=n=3:v=0:a=1[outa];`);  // 拼接英文、静音和中文
-
-        console.log('生成的 filterParts:', filterParts.join(''));
-
+        // 处理 end 文件
         ffmpeg()
-            .input(englishClip)  // 第一个输入：英文片段
-            .input(chineseClip)  // 第二个输入：中文片段
-            .complexFilter(filterParts.join(''))  // 使用滤镜链
+            .input(englishClip)  // 输入英文片段
+            .input(chineseClip)  // 输入中文片段
+            .complexFilter(filterPartsEnd.join(''))  // 使用滤镜链
             .map('[outa]')  // 映射到最终输出
             .outputOptions('-acodec libmp3lame')  // 指定 MP3 编码格式
-            .output(outputFile)
+            .output(outputFileEnd)
             .on('end', () => {
-                console.log(`音频拼接完成: ${outputFile}`);
-                resolve();
-            })
-            .on('error', (err) => {
-                console.error('处理音频时出错:', err);
-                reject(err);
-            })
-            .run();
-    });
-}
-
-
-
-function processSegment(englishClip, chineseClip, outputFile) {
-    return new Promise((resolve, reject) => {
-        const filterParts = [];
-
-        // 第1个正常音量英文片段
-        filterParts.push(`[0:a]volume=1.0[a_0];`);
-        // 第2个静音英文片段
-        filterParts.push(`[0:a]volume=0.0[a_1];`);
-        // // 第3个正常音量英文片段
-        filterParts.push(`[0:a]rubberband=pitch=1.1[a_2];`);
-        // // 第4个静音英文片段
-        filterParts.push(`[0:a]volume=0.0[a_3];`);
-        //
-        // 第1个正常音量中文片段
-        filterParts.push(`[1:a]volume=1.0[a_chinese];`);
-        // 添加2秒静音
-        filterParts.push(`anullsrc=r=44100:cl=stereo,atrim=duration=2[silence];`);
-        // 再次处理同样的英文片段，创建新的流名称
-        filterParts.push(`[0:a]volume=1.0[a_0_rpt];`);
-        filterParts.push(`[0:a]volume=0.0[a_1_rpt];`);
-        filterParts.push(`[0:a]rubberband=pitch=1.1[a_2_rpt];`);
-        filterParts.push(`[0:a]volume=0.0[a_3_rpt];`);
-        // 拼接顺序为: 英文1 -> 英文1静音 -> 英文1 -> 英文1静音 -> 中文 -> 静音 -> 英文1 -> 英文1静音 -> 英文1 -> 英文1静音
-        filterParts.push(`[a_0][a_1][a_2][a_3][a_chinese][silence][a_0_rpt][a_1_rpt][a_2_rpt][a_3_rpt]concat=n=10:v=0:a=1[outa];`);
-
-        console.log('生成的 filterParts:', filterParts.join(''));
-
-        // 使用 FFmpeg 处理音频
-        ffmpeg()
-            .input(englishClip)  // 第一个输入：英文片段
-            .input(chineseClip)  // 第二个输入：中文片段
-            .complexFilter(filterParts.join(''))  // 使用滤镜链
-            .map('[outa]')  // 映射到最终输出
-            .outputOptions('-acodec libmp3lame')  // 指定 MP3 编码格式
-            .output(outputFile)
-            .on('end', () => {
-                console.log(`音频拼接完成: ${outputFile}`);
+                console.log(`音频 end 部分拼接完成: ${outputFileEnd}`);
                 resolve();
             })
             .on('error', (err) => {
@@ -239,9 +184,6 @@ function processSegment(englishClip, chineseClip, outputFile) {
             .run();
     });
 }
-
-
-
 
 // 主函数：检测并裁剪静音部分
 async function processAudioFiles() {
@@ -257,19 +199,17 @@ async function processAudioFiles() {
         const totalDurationChinese = await getAudioDuration(inputAudioChinese);
         const silenceDataChinese = await detectSilence(inputAudioChinese);
         const chineseSegments = await trimAudio(inputAudioChinese, 'chinese', silenceDataChinese, totalDurationChinese);
-        console.log('chineseSegments', chineseSegments.length, englishSegments.length);
 
         // 确保英文和中文片段一一对应
         if (englishSegments.length !== chineseSegments.length) {
             throw new Error('英文片段和中文片段数量不一致，无法一一对应处理');
         }
-        // const outputFile = path.join(outputDir, `final_output_${1}.mp3`);
-        // await processSegment(englishSegments[0], chineseSegments[0],  outputFile);
-        // return;
-        // 如果你想恢复处理片段的逻辑
+
+        // 处理音频片段
         for (let i = 0; i < englishSegments.length; i++) {
-            const outputFile = path.join(outputDir, `final_output_${i + 1}.mp3`);
-            await processSegment(englishSegments[i], chineseSegments[i], outputFile);
+            const outputFileStart = path.join(outputDir, `final_output_${i + 1}_start.mp3`);
+            const outputFileEnd = path.join(outputDir, `final_output_${i + 1}_end.mp3`);
+            await processSegment(englishSegments[i], chineseSegments[i], outputFileStart, outputFileEnd);
         }
 
         console.log('所有音频处理完成');
@@ -278,8 +218,5 @@ async function processAudioFiles() {
     }
 }
 
-
 // 开始执行
 processAudioFiles();
-
-
