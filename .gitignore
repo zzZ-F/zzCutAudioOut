@@ -6,6 +6,9 @@
 .pnp.js
 /selectAudio/audio
 /selectAudio/output
+
+/joinAudio/audio
+/joinAudio/output
 # testing
 /coverage
 
